@@ -1,0 +1,15 @@
+# virtualenvs and large model binaries (not source)
+.venv/
+.venv-tts/
+models/
+__pycache__/
+*.pyc
+*.onnx
+*.bin
+*.iq
+# large input fixtures and raw captures (regenerate / provide locally)
+samples/*.wav
+captures/*.iq
+# compiled capture tool (rebuild from tools/sdrplay_cap.c)
+tools/sdrplay_cap
+# keep captures/*.txt and captures/*.wav as verification evidence
