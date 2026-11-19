@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """English text -> English speech WAV via Kokoro-82M (ONNX, CPU).
 
 Usage: python speak.py in.txt out.wav

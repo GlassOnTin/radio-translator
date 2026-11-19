@@ -3,22 +3,35 @@
 Local, over-the-air international radio → English text + English speech.
 No internet, no web streams: an SDR receives HF shortwave, demodulates to
 audio, and faster-whisper (large-v3, CUDA) translates locally while Kokoro
-(CPU) speaks the English to a WAV. AGPL-3.0.
+(CPU) speaks the English to a WAV. Licensed AGPL-3.0-or-later.
 
 **Quiet-hours rule:** never pass `--play`; nothing reaches the speakers.
 Text goes to stdout, English speech goes to WAV files only.
 
 ## Pipeline
 
+Local no-internet core (all stages run on this machine):
+
+```
+ffmpeg input (file / ALSA / PipeWire source) -> 16 kHz mono PCM
+   -> webrtcvad (speech chunks at pauses / max length)
+   -> faster-whisper large-v3 (CUDA, task=translate, auto language)
+   -> English text (stdout)
+   -> Kokoro (CPU) TTS -> English WAV
+```
+
+Full RF-to-whisper path:
+
 ```
 HF antenna -> SDR (RSPdx) -> IQ capture -> AM/SSB demod -> 16 kHz audio
    -> PipeWire virtual sink -> <sink>.monitor -> live.py --pulse
-   -> webrtcvad chunks -> faster-whisper large-v3 (CUDA, translate)
-   -> English text (stdout) + Kokoro TTS (CPU) -> English WAV
+   -> [the local core above]
 ```
 
 Offline path (no RF): `translate_file.py in.wav out.txt` or
 `live.py in.wav --out english.wav` (file input instead of `--pulse`).
+`translate_file.py` reads the WAV directly via soundfile and runs
+faster-whisper (no VAD chunking / TTS); `live.py` runs the full core.
 
 ## Status
 
@@ -127,11 +140,31 @@ only change needed once an HF antenna/receiver is present.
 
 Until then, the offline pipeline is verified and ready; advance software only.
 
+## Reproducibility
+
+The sample translations in `samples/lang_*_en.txt` are reproducible with
+`translate_file.py` (faster-whisper large-v3, float16, CUDA, beam_size=5,
+vad_filter=True). Re-running `./run.sh translate_file.py samples/lang_<L>.wav
+out.txt translate` yields byte-identical text (verified de/zh/ru; output is
+deterministic across runs on this GPU). The reference files were regenerated
+with the current tool so they match its newline-per-segment format.
+
 ## Layout
 
 - `live.py`, `translate_file.py` — live / offline translation.
 - `speak.py`, `clone_test.py`, `verify_languages.py` — TTS helpers.
-- `samples/` — test WAVs (16 kHz mono, multiple languages; not committed).
+- `samples/` — test WAVs (16 kHz mono, multiple languages; WAVs not committed)
+  plus `lang_*_en.txt` reference translations (committed, reproducible).
 - `captures/` — verification text + English WAV outputs.
+- `tools/` — `sdrplay_cap.c` (RSPdx IQ capture), `demod.py` (AM/SSB demod).
 - `models/` — Kokoro ONNX + voices (not committed; whisper large-v3 is in the
   HuggingFace cache).
+
+## License
+
+AGPL-3.0-or-later. See `LICENSE` (full GNU Affero General Public License v3).
+Source files carry `SPDX-License-Identifier: AGPL-3.0-or-later`. This program
+is free software: you can redistribute it and/or modify it under the terms of
+the GNU Affero General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.

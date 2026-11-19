@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Demodulate captured SDR IQ (raw int16 I/Q) to a 16 kHz mono WAV for whisper.
 numpy-only (no scipy). AM envelope detection; SSB via BFO frequency shift.
 

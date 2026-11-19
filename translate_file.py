@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Offline verification: foreign radio WAV -> English text (or source transcript).
 
 Usage: python translate_file.py in.wav out.txt [translate|transcribe] [language]

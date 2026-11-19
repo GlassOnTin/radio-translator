@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Live foreign radio -> English text + English voice.
 
 ffmpeg pulls an input (web stream, local file, ALSA or PipeWire source) as

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Voice-cloning proof: speak the English translation in the ORIGINAL speaker's
 voice, using a few seconds of the source audio as a zero-shot reference (F5-TTS).
 

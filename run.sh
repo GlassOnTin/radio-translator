@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Wrapper: run the project venv python with the CUDA 12 libraries that
 # ctranslate2/faster-whisper need (libcublas.so.12, cudnn) on LD_LIBRARY_PATH.
 # The system CUDA is v13; the venv ships the v12 libs via the nvidia-* wheels.

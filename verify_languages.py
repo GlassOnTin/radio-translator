@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Batch verification: translate every samples/lang_*.wav to English with a
 single model load. Prints detected language, English text, and RTF per file,
 and writes <name>_en.txt next to each WAV.
