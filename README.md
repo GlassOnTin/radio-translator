@@ -87,6 +87,14 @@ which the venv ships via the `nvidia-*` wheels. Use the wrapper, which sets
 `--pulse SOURCE`, `--alsa DEVICE`, `--out WAV`. `--play` is OFF by default —
 leave it off during quiet hours.
 
+## Haven remote service
+
+`translate_service.py` exposes `translate(audio file) -> English text +
+optional speech WAV` as a one-shot CLI for Haven (the pocket thin-client) to
+drive remotely over SSH exec (`run_command`) — the CUDA work runs on the
+workstation, not the phone. See [SERVICE.md](SERVICE.md) for the command, the
+Haven invocation, and the end-to-end demo. No playback, no network.
+
 ## RF-to-whisper path (for when HF hardware arrives)
 
 1. **Create a PipeWire virtual sink** (no physical output):
