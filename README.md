@@ -42,8 +42,13 @@ faster-whisper (no VAD chunking / TTS); `live.py` runs the full core.
 
 ## Offline verification (2026-11-19, RTX 5090, no internet)
 
-`translate_file.py` (faster-whisper large-v3, float16, CUDA) on `samples/lang_*.wav`,
-auto language detection, text only:
+Verified locally on broadcast sample WAVs (`samples/lang_*.wav`, 16 kHz mono).
+Those samples and the resulting translations are derived from copyrighted
+broadcasts and are **kept local, not redistributed** in this repo (see
+`.gitignore`); provide your own 16 kHz mono WAVs to reproduce. Results:
+
+`translate_file.py` (faster-whisper large-v3, float16, CUDA), auto language
+detection, text only:
 
 | sample | detected lang | p | audio | RTF |
 |---|---|---|---|---|
@@ -142,20 +147,21 @@ Until then, the offline pipeline is verified and ready; advance software only.
 
 ## Reproducibility
 
-The sample translations in `samples/lang_*_en.txt` are reproducible with
-`translate_file.py` (faster-whisper large-v3, float16, CUDA, beam_size=5,
-vad_filter=True). Re-running `./run.sh translate_file.py samples/lang_<L>.wav
-out.txt translate` yields byte-identical text (verified de/zh/ru; output is
-deterministic across runs on this GPU). The reference files were regenerated
-with the current tool so they match its newline-per-segment format.
+With local sample WAVs, `translate_file.py` (faster-whisper large-v3, float16,
+CUDA, beam_size=5, vad_filter=True) is reproducible: re-running
+`./run.sh translate_file.py samples/lang_<L>.wav out.txt translate` yields
+byte-identical text (verified de/zh/ru; output deterministic across runs on
+this GPU). The local reference files (`samples/lang_*_en.txt`, gitignored)
+were regenerated with the current tool so they match its newline-per-segment
+format. To reproduce publicly, supply your own 16 kHz mono WAVs.
 
 ## Layout
 
 - `live.py`, `translate_file.py` — live / offline translation.
 - `speak.py`, `clone_test.py`, `verify_languages.py` — TTS helpers.
-- `samples/` — test WAVs (16 kHz mono, multiple languages; WAVs not committed)
-  plus `lang_*_en.txt` reference translations (committed, reproducible).
-- `captures/` — verification text + English WAV outputs.
+- `samples/` — local test WAVs (16 kHz mono) + reference translations
+  (gitignored; broadcast-derived, not redistributed).
+- `captures/` — local verification text + English WAV outputs (gitignored).
 - `tools/` — `sdrplay_cap.c` (RSPdx IQ capture), `demod.py` (AM/SSB demod).
 - `models/` — Kokoro ONNX + voices (not committed; whisper large-v3 is in the
   HuggingFace cache).

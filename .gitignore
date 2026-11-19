@@ -7,9 +7,10 @@ __pycache__/
 *.onnx
 *.bin
 *.iq
-# large input fixtures and raw captures (regenerate / provide locally)
-samples/*.wav
-captures/*.iq
 # compiled capture tool (rebuild from tools/sdrplay_cap.c)
 tools/sdrplay_cap
-# keep captures/*.txt and captures/*.wav as verification evidence
+# Local verification fixtures derived from copyrighted broadcasts — kept on
+# disk for reproducibility, NOT redistributed in the public repo. Provide your
+# own samples/lang_*.wav (16 kHz mono) to reproduce the translations.
+samples/
+captures/

@@ -1,6 +1,0 @@
-It collects data in a systematic way, downloads it, saves it on the server,
-saves all the tags, keywords, hashtags, and all the metadata that is associated with the source,
-and puts them in the heart of the second software, since these two are always in conversation with each other.
-Therefore, it makes this work very simple.
-1. It takes a lot of time to develop.
-2.
