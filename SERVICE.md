@@ -28,25 +28,38 @@ Why not the alternatives:
 
 No loopback port is used (SSH exec, not MCP).
 
-## Service command
+## Service command (canonical: run.sh + ABSOLUTE paths)
+
+Haven `run_command` execs with **cwd = $HOME (/home/ian)** and **no login
+profile**, so use `run.sh` (venv + CUDA-12 libs) and **absolute** script and
+audio paths. This is the verified form:
 
 ```
-/home/ian/Code/radio-translator/.venv/bin/python \
+/home/ian/Code/radio-translator/run.sh \
   /home/ian/Code/radio-translator/translate_service.py \
-  <AUDIO_FILE> [--speech <OUT.wav>] [--lang xx] [--task translate|transcribe] [--json]
+  /home/ian/Code/radio-translator/samples/franceinfo_60s.wav \
+  [--speech /tmp/out.wav] [--lang xx] [--task translate|transcribe] [--json]
 ```
 
+- `run.sh` sets `LD_LIBRARY_PATH` to the venv's CUDA-12 nvidia libs and execs
+  `.venv/bin/python`. **Do not** call `translate_service.py` via its shebang
+  (`#!/usr/bin/env python3` → system python3, which lacks soundfile and the
+  CUDA-12 libs) and **do not** use relative paths (they resolve against
+  /home/ian, not the project dir).
 - `AUDIO_FILE`: any ffmpeg-readable file on the workstation (decoded to 16 kHz
-  mono internally).
+  mono internally). Use an absolute path.
 - `--speech OUT.wav`: write English Kokoro TTS to `OUT.wav` (CPU; **never
-  played**).
+  played**). Use an absolute path.
 - `--json`: stdout is a JSON object `{text, language, language_probability,
   duration_s, rtf, speech_file, task}`; otherwise stdout is the plain text.
 - Progress/summary go to **stderr**; stdout is clean text/JSON.
-- The script self-bootstraps `LD_LIBRARY_PATH` for the CUDA-12 libs
-  (libcublas.so.12) before importing ctranslate2, so no `run.sh` wrapper is
-  needed for remote exec.
 - No `--play`, no speaker output, no network.
+
+**Robustness:** `translate_service.py` also self-activates — if run under a
+different interpreter it re-execs under `.venv/bin/python` with the CUDA-12
+`LD_LIBRARY_PATH`, and it resolves a relative audio path against the project
+dir. So a direct absolute call works too regardless of cwd. `run.sh` +
+absolute paths remains the canonical, hard-to-get-wrong entry.
 
 ## Haven invocation
 
@@ -55,31 +68,43 @@ key auth; a `~/.ssh/id_ed25519_sk_haven` key exists for this):
 
 ```
 run_command(
-  profileId = "<workstation SSH profile>",
-  command   = "/home/ian/Code/radio-translator/.venv/bin/python "
+  profileId = "<workstation SSH profile, e.g. msi-z790>",
+  command   = "/home/ian/Code/radio-translator/run.sh "
               "/home/ian/Code/radio-translator/translate_service.py "
-              "/path/on/workstation/audio.wav --speech /tmp/out.wav --json",
+              "/home/ian/Code/radio-translator/samples/franceinfo_60s.wav "
+              "--speech /tmp/out.wav --json",
   timeoutMs = 120000
 )
 ```
 
-Returns `exitCode=0`, `stdout` = the JSON (translation text + `speech_file`
-path), `stderr` = progress. To translate audio captured on the phone: upload it
-to the workstation first (Haven `upload_file` / SFTP), `run_command` on that
+All paths absolute; `run.sh` is the entry (venv + CUDA-12). Returns
+`exitCode=0`, `stdout` = the JSON (translation text + `speech_file` path),
+`stderr` = progress. To translate audio captured on the phone: upload it to the
+workstation first (Haven `upload_file` / SFTP), `run_command` on that absolute
 path, then fetch the speech WAV via `serve_file` / SFTP if wanted.
 
-## End-to-end demonstration (Haven-style SSH exec)
+## End-to-end demonstration (non-login exec == Haven run_command)
 
-Run from a remote SSH exec channel (the `run_command` mechanism), workstation
-`msi-z790` (192.168.0.180), RTX 5090:
+Re-verified through a **non-login** SSH exec (cwd=$HOME, no profile sourcing —
+the same conditions as Haven `run_command`), workstation `msi-z790`
+(192.168.0.180), RTX 5090:
 
 ```
 ssh ian@192.168.0.180 \
-  '/home/ian/Code/radio-translator/.venv/bin/python \
+  '/home/ian/Code/radio-translator/run.sh \
    /home/ian/Code/radio-translator/translate_service.py \
-   /home/ian/Code/radio-translator/samples/franceinfo_60s.wav \
-   --speech /tmp/haven_fr.wav --json'
+   /home/ian/Code/radio-translator/samples/franceinfo_60s.wav --json'
 ```
+
+exitCode 0, fr→en, RTF 0.0156 (load 1.5 s, infer 0.9 s). A direct absolute call
+(no run.sh) also passes via non-login exec (self-activation), de→en RTF 0.029.
+
+**Delivery bugs fixed (found by the conductor via real Haven run_command):**
+(1) calling `translate_service.py` via its shebang used system python3 (no
+soundfile / CUDA-12 libs) — fixed by self-activating the venv + CUDA libs and
+by documenting `run.sh` as the entry; (2) relative paths resolved against the
+exec cwd (/home/ian) — fixed by documenting absolute paths and resolving any
+relative input against the project dir.
 
 Result (stdout JSON):
 ```json

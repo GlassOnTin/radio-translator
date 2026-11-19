@@ -92,8 +92,11 @@ leave it off during quiet hours.
 `translate_service.py` exposes `translate(audio file) -> English text +
 optional speech WAV` as a one-shot CLI for Haven (the pocket thin-client) to
 drive remotely over SSH exec (`run_command`) — the CUDA work runs on the
-workstation, not the phone. See [SERVICE.md](SERVICE.md) for the command, the
-Haven invocation, and the end-to-end demo. No playback, no network.
+workstation, not the phone. Canonical invocation is **`run.sh` + absolute
+script and audio paths** (run_command execs with cwd=$HOME and no login
+profile); the script also self-activates the venv + CUDA-12 libs. See
+[SERVICE.md](SERVICE.md) for the command, the Haven invocation, and the
+end-to-end demo. No playback, no network.
 
 ## RF-to-whisper path (for when HF hardware arrives)
 

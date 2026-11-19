@@ -20,28 +20,40 @@ Usage:
 stdout: translation text (or JSON with --json). stderr: progress/summary.
 Exit code 0 on success. No --play, no speaker output, no network.
 """
+import glob
 import os
 import sys
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-def _bootstrap_cuda():
-    """ctranslate2 needs libcublas.so.12 (CUDA 12); the system CUDA may be v13.
-    The venv ships the v12 libs via nvidia-* wheels. Put them on LD_LIBRARY_PATH
-    before ctranslate2 loads, re-execing once if needed (env must be set before
-    the library is loaded, i.e. before import)."""
-    here = os.path.dirname(os.path.abspath(__file__))
-    nv = os.path.join(here, ".venv", "lib", "python3.12", "site-packages", "nvidia")
-    if not os.path.isdir(nv):
-        return
-    libs = ":".join(os.path.join(nv, d, "lib") for d in sorted(os.listdir(nv))
-                    if os.path.isdir(os.path.join(nv, d, "lib")))
+
+def _bootstrap():
+    """Make a direct call work regardless of cwd/interpreter (Haven run_command
+    execs with cwd=$HOME and no login profile). Two fixes, applied by re-execing
+    once before any heavy import:
+      1. Run under the project venv python (.venv/bin/python) — the system
+         python3 lacks soundfile/faster-whisper/kokoro.
+      2. Put the venv's CUDA-12 nvidia libs (libcublas.so.12) on LD_LIBRARY_PATH
+         before ctranslate2 loads (system CUDA may be v13).
+    run.sh already does both, so when invoked via run.sh this is a no-op."""
+    venv_py = os.path.join(HERE, ".venv", "bin", "python")
+    nv = glob.glob(os.path.join(HERE, ".venv", "lib", "python3.*", "site-packages", "nvidia"))
+    libs = ""
+    if nv:
+        libs = ":".join(os.path.join(nv[0], d, "lib") for d in sorted(os.listdir(nv[0]))
+                        if os.path.isdir(os.path.join(nv[0], d, "lib")))
     cur = os.environ.get("LD_LIBRARY_PATH", "")
-    if libs and libs not in cur:
-        os.environ["LD_LIBRARY_PATH"] = libs + (":" + cur if cur else "")
-        os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])
+    need_libs = bool(libs) and libs not in cur
+    use_venv = os.path.isfile(venv_py) and \
+        os.path.realpath(sys.executable) != os.path.realpath(venv_py)
+    if use_venv or need_libs:
+        if need_libs:
+            os.environ["LD_LIBRARY_PATH"] = libs + (":" + cur if cur else "")
+        exe = venv_py if use_venv else sys.executable
+        os.execv(exe, [exe, os.path.abspath(__file__)] + sys.argv[1:])
 
 
-_bootstrap_cuda()
+_bootstrap()
 
 import argparse  # noqa: E402
 import json  # noqa: E402
@@ -75,9 +87,15 @@ def main():
     ap.add_argument("--json", action="store_true", help="emit JSON on stdout")
     args = ap.parse_args()
 
-    if not os.path.isfile(args.audio):
-        print(f"error: no such file: {args.audio}", file=sys.stderr)
+    # Resolve relative input against the project dir so a direct call works
+    # regardless of the exec cwd (Haven run_command cwd is $HOME, not here).
+    audio_path = args.audio if os.path.isabs(args.audio) else os.path.join(HERE, args.audio)
+    if not os.path.isfile(audio_path):
+        print(f"error: no such file: {audio_path}", file=sys.stderr)
         return 2
+    args.audio = audio_path
+    if args.speech:
+        args.speech = os.path.abspath(args.speech)
 
     t0 = time.time()
     audio = decode_audio(args.audio)
