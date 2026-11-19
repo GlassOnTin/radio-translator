@@ -11,7 +11,8 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 
 MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
-files = sorted(glob.glob("/home/ian/Code/radio-translator/samples/lang_*.wav"))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+files = sorted(glob.glob(os.path.join(_HERE, "samples", "lang_*.wav")))
 print(f"loading {MODEL}; {len(files)} samples", flush=True)
 model = WhisperModel(MODEL, device="cuda", compute_type="float16")
 

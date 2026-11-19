@@ -33,7 +33,7 @@ import webrtcvad
 from faster_whisper import WhisperModel
 from kokoro_onnx import Kokoro
 
-MODELS = "/home/ian/Code/radio-translator/models"
+MODELS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 SR = 16000
 FRAME_MS = 30
 FRAME_BYTES = SR * FRAME_MS // 1000 * 2  # 480 samples, s16le

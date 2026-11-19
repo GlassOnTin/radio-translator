@@ -6,11 +6,12 @@ Two cases: Chinese (F5 supports ZH natively) and French (F5 is EN/ZH-optimised,
 so this is a best-effort cross-lingual clone). Generates WAVs only -- no playback.
 Run in the .venv-tts environment.
 """
+import os
 import time
 
 from f5_tts.api import F5TTS
 
-S = "/home/ian/Code/radio-translator/samples"
+S = os.path.join(os.path.dirname(os.path.abspath(__file__)), "samples")
 
 
 def lines(path, n):

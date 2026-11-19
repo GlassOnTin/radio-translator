@@ -5,6 +5,7 @@ Usage: python speak.py in.txt out.wav
 Strips [t -> t] timestamp prefixes, splits long text on sentence boundaries
 (Kokoro caps ~510 phonemes per call), concatenates the audio.
 """
+import os
 import re
 import sys
 import time
@@ -13,7 +14,7 @@ import numpy as np
 import soundfile as sf
 from kokoro_onnx import Kokoro
 
-MODELS = "/home/ian/Code/radio-translator/models"
+MODELS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
 txt, out_wav = sys.argv[1], sys.argv[2]
 text = open(txt).read().strip()
