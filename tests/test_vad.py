@@ -27,7 +27,10 @@ def feed_in_blocks(v, audio, block):
 class TestStreamingState(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.audio = asr.load_wav(os.path.join(HERE, "samples", "lang_zh.wav"))[:16000 * 5]
+        path = os.path.join(HERE, "samples", "lang_zh.wav")
+        if not os.path.isfile(path):
+            raise unittest.SkipTest("samples/lang_zh.wav not present (gitignored fixture)")
+        cls.audio = asr.load_wav(path)[:16000 * 5]
 
     def test_block_invariant_probabilities(self):
         a, b, c = vad.SileroVad(), vad.SileroVad(), vad.SileroVad()
@@ -58,7 +61,10 @@ class TestMusicDiscrimination(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.speech = asr.load_wav(os.path.join(HERE, "samples", "lang_zh.wav"))
+        speech_path = os.path.join(HERE, "samples", "lang_zh.wav")
+        if not os.path.isfile(speech_path):
+            raise unittest.SkipTest("samples/lang_zh.wav not present (gitignored fixture)")
+        cls.speech = asr.load_wav(speech_path)
         music_path = os.path.join(HERE, "captures", "zh_radio_180s.wav")
         cls.music = asr.load_wav(music_path) if os.path.isfile(music_path) else None
 
