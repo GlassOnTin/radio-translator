@@ -1,0 +1,14 @@
+# Optional voice-isolation enhancement stage (tools/isolate_audio.py offline,
+# tools/isolate_stream.py for the live path). Install into a separate .venv-tts:
+#   uv venv .venv-tts --python 3.12
+#   uv pip install --python .venv-tts/bin/python torch==2.15.0 \
+#       --index-url https://download.pytorch.org/whl/cu132
+#   uv pip install --python .venv-tts/bin/python -r requirements-enhance.txt
+# torch is pinned here for reproducibility (CUDA 13 wheels; the main .venv uses
+# CUDA 12 for ctranslate2 — hence the two-venv split). CPU-only: use the cu126
+# or cpu torch index instead.
+# Model: inworld-ai/voice-isolator, Apache-2.0 code AND weights. The causal
+# streaming model adds ~63 ms latency (lookahead 2) at RTF ~0.22 on GPU.
+torch==2.15.0
+inworld-voice-isolation==1.0.0
+scipy==1.18.1

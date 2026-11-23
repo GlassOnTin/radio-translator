@@ -109,8 +109,15 @@ absolute paths and resolving relative input against the project dir.
 - Phone-side integration: the actual run_command call from Haven (the demo used
   an equivalent SSH exec channel). Wiring Haven's workstation profile and
   calling from the phone remains.
-- Live HF over-the-air: hardware-gated (SDRplay needs an HF antenna; the
-  PZSDR/AD9361 cannot reach HF). The service translates files; the RF capture
-  path (tools/sdrplay_cap.c -> tools/demod.py -> PipeWire -> live.py --pulse)
-  waits on hardware.
 - Audio transfer phone<->workstation (upload/serve_file) not exercised.
+
+## Verified since the first demo
+
+- Live HF over-the-air now works on an SDRplay RSPdx-R2 (antenna port C on the
+  development machine). Mode A taps the SDRconnect GUI's audio output; Mode B
+  is fully headless: `sdrplay_cap ... - C | demod_stream.py | live.py --stdin`.
+  A 60 s Mode B run on 9.630 MHz produced 5 pause-closed chunks at 2.3-4.1 s
+  latency with coherent English and no hallucinations. See README "RF path".
+- The 14-language regression passes 14/14; the Haven one-shot still returns
+  exit 0, fr->en, RTF 0.016 through a non-login SSH exec.
+- The PZSDR/Pluto (AD9361) still cannot reach HF; the RSPdx is the HF receiver.

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# systemd USER unit for the translation daemon (no root).
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/radio-translator-daemon.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now radio-translator-daemon
+# Adjust WorkingDirectory/ExecStart if the repo is not at ~/Code/radio-translator.
+[Unit]
+Description=radio-translator translation daemon (SDR++ plugin backend)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Code/radio-translator
+ExecStart=%h/Code/radio-translator/run.sh tools/translate_daemon.py --port 8770 --enhance isolate --audio-out --tts
+Restart=on-failure
+RestartSec=3
+# Voice isolation needs .venv-tts (setup.sh --enhance) and a GPU. Pin a free GPU
+# if GPU0 is busy; drop --enhance isolate for a CPU-only / no-isolation daemon.
+# Environment=CUDA_VISIBLE_DEVICES=2
+
+[Install]
+WantedBy=default.target

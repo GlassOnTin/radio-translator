@@ -1,0 +1,12 @@
+# Measured versions (Python 3.12, CUDA 12). Install into .venv:
+#   uv pip install --python .venv/bin/python -r requirements.txt
+# silero v6 VAD ships inside faster-whisper (no separate dependency).
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+kokoro-onnx==0.6.1
+onnxruntime==1.32.0
+numpy==2.5.4
+soundfile==0.14.0
+webrtcvad-wheels==2.0.14.post1
+av==19.0.2
+websockets==17.4

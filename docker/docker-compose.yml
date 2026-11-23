@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# CPU daemon by default; GPU profile needs the NVIDIA Container Toolkit:
+#   docker compose -f docker/docker-compose.yml up daemon-cpu
+#   docker compose -f docker/docker-compose.yml --profile gpu up daemon-gpu
+services:
+  daemon-cpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
+    image: ghcr.io/glassontin/radio-translator-daemon:cpu
+    ports:
+      - "8770:8770"
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+  daemon-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gpu
+    image: ghcr.io/glassontin/radio-translator-daemon:gpu
+    ports:
+      - "8770:8770"
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    profiles: ["gpu"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+volumes:
+  hf-cache:

@@ -1,0 +1,4 @@
+# Optional: ASR benchmark candidates for tools/bench_asr.py (SenseVoice,
+# Qwen3-ASR via sherpa-onnx). Verified to coexist with kokoro-onnx's
+# onnxruntime in one process. Not needed for the live translation path.
+sherpa-onnx==2.0.2

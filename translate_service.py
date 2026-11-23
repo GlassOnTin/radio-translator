@@ -57,24 +57,13 @@ _bootstrap()
 
 import argparse  # noqa: E402
 import json  # noqa: E402
-import subprocess  # noqa: E402
 import time  # noqa: E402
 
+import asr  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
-from faster_whisper import WhisperModel  # noqa: E402
 
-SR = 16000
-
-
-def decode_audio(path):
-    """Decode any ffmpeg-readable file to 16 kHz mono float32 via ffmpeg."""
-    proc = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", path,
-         "-f", "s16le", "-ac", "1", "-ar", str(SR), "pipe:1"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-    pcm = np.frombuffer(proc.stdout, dtype=np.int16).astype(np.float32) / 32768.0
-    return pcm
+SR = asr.SR
 
 
 def main():
@@ -98,19 +87,16 @@ def main():
         args.speech = os.path.abspath(args.speech)
 
     t0 = time.time()
-    audio = decode_audio(args.audio)
+    audio = asr.decode_audio(args.audio)
     dur = len(audio) / SR
     print(f"[service] decoded {args.audio}: {dur:.1f}s @ {SR}Hz; loading {args.model} (cuda)...",
           file=sys.stderr, flush=True)
-    model = WhisperModel(args.model, device="cuda", compute_type="float16")
+    model = asr.load_whisper(args.model)
     t_load = time.time() - t0
 
-    kwargs = dict(task=args.task, beam_size=5, vad_filter=True,
-                  condition_on_previous_text=False)
-    if args.lang:
-        kwargs["language"] = args.lang
     t1 = time.time()
-    segments, info = model.transcribe(audio, **kwargs)
+    segments, info = asr.transcribe(model, audio, task=args.task,
+                                    lang=args.lang, profile="file")
     lines = [s.text.strip() for s in segments if s.text.strip()]
     text = "\n".join(lines)
     t_infer = time.time() - t1
