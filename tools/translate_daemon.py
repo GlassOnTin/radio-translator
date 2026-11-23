@@ -144,21 +144,33 @@ def main():
 
     print(f"[daemon] tier={tier['tier']} model={tier['model']} device={tier['device']} "
           f"compute_type={tier['compute_type']}", flush=True)
-    model = asr.load_whisper(tier["model"], device=tier["device"],
-                             compute_type=tier["compute_type"],
-                             device_index=args.device_index, cpu_threads=args.cpu_threads)
-    sub_backend = None
-    if args.backend == "whisper-mt":
-        from backends import WhisperMTModel
-        model = WhisperMTModel(model, mt_model=args.mt_model)
-    elif args.backend == "canary":
-        from backends import SubprocessBackend, CanaryRouter
-        sub_backend = SubprocessBackend("canary_backend.py", device=tier["device"])
-        model = CanaryRouter(model, sub_backend)
-    elif args.backend == "seamless":
-        from backends import SubprocessBackend
-        sub_backend = SubprocessBackend("seamless_backend.py", device=tier["device"])
+    base_model = asr.load_whisper(tier["model"], device=tier["device"],
+                                  compute_type=tier["compute_type"],
+                                  device_index=args.device_index, cpu_threads=args.cpu_threads)
     model_lock = threading.Lock()
+    # torch backends (canary/seamless) are cached subprocesses, spawned on demand
+    _sub_cache = {}
+    _sub_lock = threading.Lock()
+
+    def get_sub(script):
+        with _sub_lock:
+            if script not in _sub_cache:
+                from backends import SubprocessBackend
+                _sub_cache[script] = SubprocessBackend(script, device=tier["device"])
+            return _sub_cache[script]
+
+    def make_backend(name):
+        """Return (translator_model, s2st_subprocess) for a backend name."""
+        from backends import WhisperMTModel, CanaryRouter
+        if name == "whisper-mt":
+            return WhisperMTModel(base_model, mt_model=args.mt_model), None
+        if name == "canary":
+            sb = get_sub("canary_backend.py")
+            return CanaryRouter(base_model, sb), sb
+        if name == "seamless":
+            sb = get_sub("seamless_backend.py")
+            return base_model, sb
+        return base_model, None
     # Kokoro loads lazily on first TTS use so CPU/no-TTS installs start without
     # the (gitignored, downloaded) model files.
     kokoro = None
@@ -183,8 +195,19 @@ def main():
 
     async def handler(ws):
         print("[daemon] client connected", flush=True)
-        trans = Translator(model, lang=args.lang, gates=not args.no_gates,
+        backend_name = args.backend
+        m0, sub_backend = make_backend(backend_name)
+        trans = Translator(m0, lang=args.lang, gates=not args.no_gates,
                            lang_window=args.lang_window)
+
+        def set_backend(name):
+            nonlocal backend_name, sub_backend
+            m, sb = make_backend(name)
+            trans.model = m
+            sub_backend = sb
+            backend_name = name
+            print(f"[daemon] backend -> {name}", flush=True)
+
         ck = chunker.Chunker(vad=SileroVad(), silence_ms=args.silence, cap_s=args.chunk)
         loop = asyncio.get_running_loop()
         q = asyncio.Queue()
@@ -212,7 +235,7 @@ def main():
             iso_reader = threading.Thread(target=iso_read, daemon=True)
             iso_reader.start()
 
-        await ws.send(json.dumps(status))
+        await ws.send(json.dumps({**status, "backend": backend_name}))
 
         async def worker():
             while True:
@@ -234,7 +257,7 @@ def main():
                     except websockets.ConnectionClosed:
                         return
                     if (not ev["suppressed"] and ev["text"]
-                            and args.backend == "seamless" and sub_backend is not None):
+                            and backend_name == "seamless" and sub_backend is not None):
                         def s2st():
                             from backends import resample_ratio
                             wav, _ = sub_backend.translate_audio(a, src_lang=ev["language_raw"])
@@ -306,6 +329,9 @@ def main():
                         ctrl = json.loads(msg)
                     except json.JSONDecodeError:
                         continue
+                    if "backend" in ctrl and ctrl["backend"] != backend_name:
+                        await asyncio.to_thread(set_backend, ctrl["backend"])
+                        await ws.send(json.dumps({**status, "backend": backend_name}))
                     if "lang" in ctrl:
                         trans.lang = ctrl["lang"] or None
                     if "chunk" in ctrl or "silence" in ctrl:

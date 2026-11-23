@@ -53,6 +53,7 @@ public:
     std::string voice = "af_heart";
     float ttsSpeed = 1.0f;
     bool gates = true;
+    std::string backend = "whisper";
     float chunkSeconds = 12.0f;
     int silenceMs = 300;
     float bufferMinutes = 10.0f;
@@ -323,6 +324,16 @@ private:
         if (ImGui::Checkbox(CONCAT("Suppress hallucinations##rt_", _this->name), &_this->gates)) {
             _this->ws.sendText(std::string("{\"gates\":") + (_this->gates ? "true" : "false") + "}");
             _this->saveConfig();
+        }
+        {
+            static const char* backs[] = {"whisper", "whisper-mt", "canary", "seamless"};
+            int idx = 0;
+            for (int i = 0; i < 4; i++) { if (_this->backend == backs[i]) { idx = i; } }
+            if (ImGui::Combo(CONCAT("Backend##rt_", _this->name), &idx, backs, 4)) {
+                _this->backend = backs[idx];
+                _this->ws.sendText("{\"backend\":\"" + _this->backend + "\"}");
+            }
+            ImGui::TextUnformatted("seamless = non-commercial S2ST (opt-in)");
         }
 
         ImGui::TextUnformatted(_this->ws.connected() ? "connected" : "disconnected");
