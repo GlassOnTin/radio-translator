@@ -67,6 +67,10 @@ def main():
     ap.add_argument("--models-dir", default=os.path.join(ROOT, "models"))
     ap.add_argument("--whisper", choices=list(WHISPER_REPO), default=None,
                     help="also pre-seed the HuggingFace cache for this whisper size")
+    ap.add_argument("--canary", action="store_true",
+                    help="pre-seed Canary-1b-v2 (CC-BY-4.0, European S2TT)")
+    ap.add_argument("--seamless", action="store_true",
+                    help="OPT-IN: pre-seed SeamlessM4T v2 (CC-BY-NC-4.0, NON-COMMERCIAL S2ST)")
     ap.add_argument("--offline", action="store_true", help="verify only, no download")
     args = ap.parse_args()
 
@@ -83,6 +87,20 @@ def main():
         else:
             from huggingface_hub import snapshot_download
             snapshot_download(repo_id=repo)
+            print("  OK")
+
+    if args.canary:
+        print("Canary-1b-v2 (CC-BY-4.0): pre-seeding HF cache nvidia/canary-1b-v2")
+        if not args.offline:
+            from huggingface_hub import snapshot_download
+            snapshot_download(repo_id="nvidia/canary-1b-v2")
+            print("  OK")
+    if args.seamless:
+        print("SeamlessM4T v2 (CC-BY-NC-4.0, NON-COMMERCIAL opt-in): pre-seeding "
+              "HF cache facebook/seamless-m4t-v2-large")
+        if not args.offline:
+            from huggingface_hub import snapshot_download
+            snapshot_download(repo_id="facebook/seamless-m4t-v2-large")
             print("  OK")
 
     print("Voice-isolator weights (Apache-2.0): fetched by the inworld package "

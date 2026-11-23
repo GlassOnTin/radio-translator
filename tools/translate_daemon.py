@@ -122,6 +122,9 @@ def main():
     ap.add_argument("--tts", action="store_true", help="synthesize English Kokoro TTS per chunk")
     ap.add_argument("--voice", default="af_heart", help="Kokoro voice for TTS")
     ap.add_argument("--speed", type=float, default=1.0, help="Kokoro TTS speech rate")
+    ap.add_argument("--backend", choices=["whisper", "whisper-mt", "canary", "seamless"],
+                    default="whisper", help="translation backend")
+    ap.add_argument("--mt-model", default="qwen3.6:27b", help="ollama model for whisper-mt")
     args = ap.parse_args()
 
     tier = detect_tier(args.device_index)
@@ -144,6 +147,17 @@ def main():
     model = asr.load_whisper(tier["model"], device=tier["device"],
                              compute_type=tier["compute_type"],
                              device_index=args.device_index, cpu_threads=args.cpu_threads)
+    sub_backend = None
+    if args.backend == "whisper-mt":
+        from backends import WhisperMTModel
+        model = WhisperMTModel(model, mt_model=args.mt_model)
+    elif args.backend == "canary":
+        from backends import SubprocessBackend, CanaryRouter
+        sub_backend = SubprocessBackend("canary_backend.py", device=tier["device"])
+        model = CanaryRouter(model, sub_backend)
+    elif args.backend == "seamless":
+        from backends import SubprocessBackend
+        sub_backend = SubprocessBackend("seamless_backend.py", device=tier["device"])
     model_lock = threading.Lock()
     # Kokoro loads lazily on first TTS use so CPU/no-TTS installs start without
     # the (gitignored, downloaded) model files.
@@ -162,7 +176,7 @@ def main():
 
     status = dict(type="status", protocol_version=1, tier=tier["tier"],
                   model=tier["model"], device=tier["device"],
-                  compute_type=tier["compute_type"])
+                  compute_type=tier["compute_type"], backend=args.backend)
     tts_py = os.path.join(ROOT, ".venv-tts", "bin", "python")
     if not os.path.isfile(tts_py):
         tts_py = sys.executable  # e.g. Docker GPU image: torch in the main python
@@ -219,7 +233,21 @@ def main():
                         await ws.send(json.dumps(ev, ensure_ascii=False))
                     except websockets.ConnectionClosed:
                         return
-                    if tts_enabled and not ev["suppressed"] and ev["text"]:
+                    if (not ev["suppressed"] and ev["text"]
+                            and args.backend == "seamless" and sub_backend is not None):
+                        def s2st():
+                            from backends import resample_ratio
+                            wav, _ = sub_backend.translate_audio(a, src_lang=ev["language_raw"])
+                            return resample_ratio(wav, 3, 2).tobytes()  # 16k -> 24k
+                        try:
+                            sb = await asyncio.to_thread(s2st)
+                            for i in range(0, len(sb), 4000):
+                                await ws.send(b"\x01" + sb[i:i + 4000])
+                        except websockets.ConnectionClosed:
+                            return
+                        except Exception as e:
+                            print(f"[daemon] s2st error: {e}", flush=True)
+                    elif tts_enabled and not ev["suppressed"] and ev["text"]:
                         def synth():
                             samples, _ = get_kokoro().create(ev["text"], voice=voice,
                                                              speed=tts_speed, lang="en-us")
@@ -254,13 +282,17 @@ def main():
         wt = asyncio.create_task(worker())
         dt = asyncio.create_task(dispatcher()) if iso_proc is not None else None
         rx_bytes = 0
-        rx_pcm = bytearray()
+        rec_file = None
+        if args.record:
+            import soundfile as sf
+            rec_file = sf.SoundFile(args.record, "w", samplerate=16000,
+                                    channels=1, subtype="FLOAT")
         try:
             async for msg in ws:
                 if isinstance(msg, (bytes, bytearray)):
                     rx_bytes += len(msg)
-                    if args.record:
-                        rx_pcm.extend(msg)
+                    if rec_file is not None:
+                        rec_file.write(np.frombuffer(msg, dtype=np.int16).astype(np.float32) / 32768.0)
                     if iso_proc is not None:
                         await asyncio.to_thread(iso_proc.stdin.write, bytes(msg))
                     if not use_iso:
@@ -302,13 +334,9 @@ def main():
         finally:
             print(f"[daemon] client disconnected, received {rx_bytes/2/16000:.1f}s audio, "
                   f"chunks={trans.idx} suppressed={trans.suppressed}", flush=True)
-            if args.record and rx_pcm:
-                import soundfile as sf
-                a = np.frombuffer(bytes(rx_pcm), dtype=np.int16).astype(np.float32) / 32768.0
-                sf.write(args.record, a, 16000)
-                rms = float(np.sqrt(np.mean(a**2))) if len(a) else 0.0
-                print(f"[daemon] recorded {args.record}: {len(a)/16000:.1f}s "
-                      f"RMS {20*np.log10(rms+1e-12):.1f} dBFS", flush=True)
+            if rec_file is not None:
+                rec_file.close()
+                print(f"[daemon] recorded {args.record}: {rx_bytes/2/16000:.1f}s (continuous)", flush=True)
             if iso_proc is not None:
                 try:
                     iso_proc.stdin.close()

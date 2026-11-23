@@ -37,6 +37,21 @@ inworld voice-isolator, **code and weights Apache-2.0**
 weights; it credits training data including VocalSet (CC BY 4.0) and
 IndicVoices-R (CC BY 4.0). See `licenses/voice-isolator-LICENSE.txt`.
 
+## Translation backends (v0.2)
+
+| Backend | License | Notes |
+|---|---|---|
+| whisper large-v3 (default) | MIT | broad-coverage S2TT baseline |
+| Canary-1b-v2 (`--backend canary`) | **CC-BY-4.0** | attribution required; European-language S2TT, whisper fallback otherwise |
+| whisper-mt MT stage (`--backend whisper-mt`) | Qwen3 **Apache-2.0** (or other local ollama model) | source text → LLM → English |
+| Opus-MT (CPU MT fallback) | CC-BY-4.0 | Helsinki-NLP, CTranslate2 int8 |
+| **SeamlessM4T v2 S2ST** (`--backend seamless`) | **CC-BY-NC-4.0 — NON-COMMERCIAL** | opt-in experiment, **never the default**; weights fetched only via explicit `scripts/fetch_models.py --seamless`; not for commercial use |
+| sentencepiece / tiktoken | Apache-2.0 / MIT | SeamlessM4T tokenizer deps |
+
+The SeamlessM4T weights are non-commercial: they are an explicitly-labeled,
+user-downloaded option and are never auto-fetched or enabled by a default
+install. The AGPL daemon code does not convey the NC weights.
+
 ## Native module dependency
 
 | Component | License | Notes |

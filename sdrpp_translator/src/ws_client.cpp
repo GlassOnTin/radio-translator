@@ -153,8 +153,8 @@ void WsClient::handleReceive(const char* data, size_t len) {
         }
     } else if (type == "status") {
         int pv = ev.value("protocol_version", 0);
-        std::string line = ev.value("tier", "?") + " / " + ev.value("model", "?") +
-                           " / " + ev.value("device", "?");
+        std::string line = ev.value("backend", "whisper") + " / " + ev.value("tier", "?") +
+                           " / " + ev.value("model", "?") + " / " + ev.value("device", "?");
         if (pv != 1) {
             line += "  [protocol mismatch: daemon v" + std::to_string(pv) + ", module v1]";
         }

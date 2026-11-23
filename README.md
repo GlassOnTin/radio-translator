@@ -121,6 +121,31 @@ docker compose -f docker/docker-compose.yml up daemon-cpu
 docker compose -f docker/docker-compose.yml --profile gpu up daemon-gpu
 ```
 
+### Translation backends
+
+The daemon takes `--backend`:
+
+- `whisper` (default): faster-whisper large-v3 translate — broadest language
+  coverage, CPU-int8 fallback.
+- `whisper-mt`: whisper *transcribe* (source text) → a local ollama LLM
+  (`--mt-model`, default qwen3.6:27b) → English. More idiomatic/coherent than
+  whisper's built-in translate; ~2 s warm latency. Needs ollama running.
+- `canary`: Canary-1b-v2 (CC-BY-4.0) for European languages, auto-routed by
+  detected language with whisper fallback for the rest. Fast (~0.2 s warm).
+  Weights: `scripts/fetch_models.py --canary`.
+- `seamless`: **SeamlessM4T v2 direct speech-to-speech (CC-BY-NC-4.0,
+  NON-COMMERCIAL, opt-in experiment)**. Outputs translated English speech
+  directly (no text→TTS cascade); the whisper text transcript still feeds the
+  sidebar. Weights are never auto-downloaded — fetch explicitly with
+  `scripts/fetch_models.py --seamless`. Not for commercial use.
+
+Torch backends (canary, seamless) run in `.venv-tts` (setup.sh --enhance, plus
+sentencepiece/tiktoken). Compare backends with `tools/bench_backends.py FIXTURE
+--ref REF_en.txt`. Note: BLEU against the bundled whisper-generated references
+is circular (whisper scores 100 vs its own output); judge coherence by human
+read — on spontaneous Spanish, whisper-mt reads most fluently, Canary is
+literal but fast, whisper is garbled.
+
 ### Build the module
 
 SDR++ modules are **ABI-coupled to the exact core** and the loader does no

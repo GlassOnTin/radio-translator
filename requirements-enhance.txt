@@ -12,3 +12,6 @@
 torch==2.15.0
 inworld-voice-isolation==1.0.0
 scipy==1.18.1
+# Canary / SeamlessM4T backends (transformers already present in .venv-tts):
+sentencepiece==0.2.3   # SeamlessM4T tokenizer
+tiktoken==0.14.0       # SeamlessM4T tokenizer conversion
