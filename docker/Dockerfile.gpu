@@ -11,7 +11,7 @@ COPY requirements.txt requirements-enhance.txt ./
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt \
     nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"
 RUN pip install --no-cache-dir --break-system-packages torch==2.15.0 \
-    --index-url https://download.pytorch.org/whl/cu126 \
+    --index-url https://download.pytorch.org/whl/cu132 \
     && pip install --no-cache-dir --break-system-packages -r requirements-enhance.txt
 COPY . .
 RUN python3 scripts/fetch_models.py || echo "Kokoro fetch deferred to runtime"

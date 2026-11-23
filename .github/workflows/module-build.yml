@@ -26,8 +26,10 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             git cmake g++ make python3 pkg-config ca-certificates \
-            libvolk-dev libfftw3-dev libglfw3-dev libglew-dev libzstd-dev \
+            libfftw3-dev libglfw3-dev libglew-dev libzstd-dev \
             libwebsockets-dev libusb-1.0-0-dev libpulse-dev librtaudio-dev
+          # volk package name differs by distro (libvolk-dev vs libvolk2-dev)
+          apt-get install -y libvolk-dev || apt-get install -y libvolk2-dev
       - uses: actions/checkout@v4
       - name: Build translator module (pinned SDR++ commit)
         run: |
