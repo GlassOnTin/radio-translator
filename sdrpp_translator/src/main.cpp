@@ -14,7 +14,7 @@
 #include <dsp/multirate/rational_resampler.h>
 #include <dsp/sink/handler_sink.h>
 #include <utils/event.h>
-#include <nlohmann/json.hpp>
+#include <json.hpp>
 #include <mutex>
 #include <string>
 #include <cstring>
